@@ -36,4 +36,21 @@ if [ "$1" == "-add" ]; then
             '{name: $service, accounts: [{mail: $mail, username: $username, password: $password}], site_url: $site}')
         jq ".services += [$NEW_SERVICE]" "${PASSWORD_FILE}" > "temp.json" && mv "temp.json" "${PASSWORD_FILE}"
     fi
+#Retrieve an existing service
+elif [ "$1" == "-get" ]; then
+    if [ -z "$2" ]; then
+        echo "Please provide a service name like: passkeeper -get <service>"
+        exit 1
+    fi
+
+    SERVICE="$2"
+
+    # Check if the service exists
+    if jq -e ".services[] | select(.name==\"$SERVICE\")" "${PASSWORD_FILE}" >/dev/null 2>&1; then
+        # Service exists, print the details
+        jq -r ".services[] | select(.name==\"$SERVICE\") | \"\(.name) \(.site_url)\", .accounts[]" "${PASSWORD_FILE}"
+    else
+        # Service doesn't exist
+        echo "No service named '$SERVICE' found."
+    fi
 fi
