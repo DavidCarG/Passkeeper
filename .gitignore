@@ -4,3 +4,6 @@
 #Local variables
 *.env
 *.env.local
+
+#Encrypted files
+*.enc
