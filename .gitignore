@@ -1,2 +1,6 @@
 #Json files
 *.json
+
+#Local variables
+*.env
+*.env.local
