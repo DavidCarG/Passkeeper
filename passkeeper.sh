@@ -10,6 +10,10 @@ if [ "$1" == "-add" ]; then
         exit 1
     fi
 
+    # Decrypt the file and get the .json file name
+    decrypt.sh "${PASSWORD_FILE}"
+    JSON_FILE=$(basename "${PASSWORD_FILE}" .enc)
+
     SERVICE="$2"
 
     # Ask for the details
@@ -26,16 +30,19 @@ if [ "$1" == "-add" ]; then
     fi
 
     # Check if the service already exists
-    if jq -e ".services[] | select(.name==\"$SERVICE\")" "${PASSWORD_FILE}" >/dev/null 2>&1; then
+    if jq -e ".services[] | select(.name==\"$SERVICE\")" "${JSON_FILE}" >/dev/null 2>&1; then
         # Service exists, add new account
         NEW_ACCOUNT=$(jq -n --arg mail "$MAIL" --arg username "$USERNAME" --arg password "$PASSWORD" '{mail: $mail, username: $username, password: $password}')
-        jq "(.services[] | select(.name==\"$SERVICE\").accounts) += [$NEW_ACCOUNT]" "${PASSWORD_FILE}" > "temp.json" && mv "temp.json" "${PASSWORD_FILE}"
+        jq "(.services[] | select(.name==\"$SERVICE\").accounts) += [$NEW_ACCOUNT]" "${JSON_FILE}" > "temp.json" && mv "temp.json" "${JSON_FILE}"
     else
         # Service doesn't exist, create new service
         NEW_SERVICE=$(jq -n --arg service "$SERVICE" --arg mail "$MAIL" --arg username "$USERNAME" --arg password "$PASSWORD" --arg site "$SITE" \
             '{name: $service, accounts: [{mail: $mail, username: $username, password: $password}], site_url: $site}')
-        jq ".services += [$NEW_SERVICE]" "${PASSWORD_FILE}" > "temp.json" && mv "temp.json" "${PASSWORD_FILE}"
+        jq ".services += [$NEW_SERVICE]" "${JSON_FILE}" > "temp.json" && mv "temp.json" "${JSON_FILE}"
     fi
+
+    # Encrypt the .json file
+    encrypt.sh "${JSON_FILE}"
 #Retrieve an existing service
 elif [ "$1" == "-get" ]; then
     if [ -z "$2" ]; then
@@ -44,11 +51,14 @@ elif [ "$1" == "-get" ]; then
     fi
 
     SERVICE="$2"
+    decrypt.sh "${PASSWORD_FILE}"
+    JSON_FILE=$(basename "${PASSWORD_FILE}" .enc)
 
     # Check if the service exists
-    if jq -e ".services[] | select(.name==\"$SERVICE\")" "${PASSWORD_FILE}" >/dev/null 2>&1; then
+    if jq -e ".services[] | select(.name==\"$SERVICE\")" "${JSON_FILE}" >/dev/null 2>&1; then
         # Service exists, print the details
-        jq -r ".services[] | select(.name==\"$SERVICE\") | \"\(.name) \(.site_url)\", .accounts[]" "${PASSWORD_FILE}"
+        jq -r ".services[] | select(.name==\"$SERVICE\") | \"\(.name) \(.site_url)\", .accounts[]" "${JSON_FILE}"
+        encrypt.sh "${JSON_FILE}"
     else
         # Service doesn't exist
         echo "No service named '$SERVICE' found."
