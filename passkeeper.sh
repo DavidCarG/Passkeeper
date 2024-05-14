@@ -3,6 +3,7 @@
 source .env.local
 
 PASSWORD_FILE="$PASSWORD_FILE_PATH"
+PASSWORD_KEY="$PASSWORD_KEY"
 
 if [ "$1" == "-add" ]; then
     if [ -z "$2" ]; then
@@ -11,7 +12,7 @@ if [ "$1" == "-add" ]; then
     fi
 
     # Decrypt the file and get the .json file name
-    decrypt.sh "${PASSWORD_FILE}"
+    decrypt.sh "${PASSWORD_FILE}" "${PASSWORD_KEY}"
     JSON_FILE=$(basename "${PASSWORD_FILE}" .enc)
 
     SERVICE="$2"
@@ -42,7 +43,7 @@ if [ "$1" == "-add" ]; then
     fi
 
     # Encrypt the .json file
-    encrypt.sh "${JSON_FILE}"
+    encrypt.sh "${JSON_FILE}" "${PASSWORD_KEY}"
 #Retrieve an existing service
 elif [ "$1" == "-get" ]; then
     if [ -z "$2" ]; then
@@ -51,14 +52,14 @@ elif [ "$1" == "-get" ]; then
     fi
 
     SERVICE="$2"
-    decrypt.sh "${PASSWORD_FILE}"
+    decrypt.sh "${PASSWORD_FILE}" "${PASSWORD_KEY}"
     JSON_FILE=$(basename "${PASSWORD_FILE}" .enc)
 
     # Check if the service exists
     if jq -e ".services[] | select(.name==\"$SERVICE\")" "${JSON_FILE}" >/dev/null 2>&1; then
         # Service exists, print the details
         jq -r ".services[] | select(.name==\"$SERVICE\") | \"\(.name) \(.site_url)\", .accounts[]" "${JSON_FILE}"
-        encrypt.sh "${JSON_FILE}"
+        encrypt.sh "${JSON_FILE}" "${PASSWORD_KEY}"
     else
         # Service doesn't exist
         echo "No service named '$SERVICE' found."
